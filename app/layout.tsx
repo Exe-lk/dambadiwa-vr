@@ -18,9 +18,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Poson Sri Lanka | Celebrate Poson. Experience Peace.",
+  title: "Dabadiwa Wandana",
   description:
-    "A spiritual journey through the sacred landscapes of Sri Lanka.",
+    "Sacred Buddhist pilgrimage from Sri Lanka to the historic Buddhist holy sites in India.",
 };
 
 export default function RootLayout({

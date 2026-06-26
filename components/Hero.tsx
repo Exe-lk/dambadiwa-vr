@@ -70,7 +70,7 @@ function PlayIcon() {
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen w-full overflow-hidden">
+    <section className="relative min-h-[70vh] max-h-[80vh] w-full overflow-hidden md:max-h-none md:min-h-screen">
       <Image
         src="/dabadiwa.png"
         alt="Sacred Buddhist pilgrimage from Sri Lanka to historic holy sites in India"
@@ -83,13 +83,13 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
-      <div className="relative z-10 flex min-h-screen flex-col">
-        <header className="flex items-center justify-between px-6 py-6 md:px-12 lg:px-16">
+      <div className="relative z-10 flex min-h-[70vh] max-h-[80vh] flex-col md:max-h-none md:min-h-screen">
+        <header className="flex items-center justify-between px-6 py-4 md:px-12 md:py-6 lg:px-16">
           <Link href="/" className="flex items-center gap-3">
             <StupaLogo />
             <div className="font-serif leading-tight text-white">
               <span className="block text-lg font-semibold tracking-wide">
-                DABADIVA
+                DABADIWA
               </span>
               <span className="block text-xs tracking-[0.2em] opacity-90">
                 WANDANA
@@ -123,18 +123,18 @@ export default function Hero() {
           </Link>
         </header>
 
-        <div className="flex flex-1 flex-col justify-center px-6 pb-20 md:px-12 lg:px-16">
+        <div className="flex flex-1 flex-col justify-center px-6 pb-12 md:px-12 md:pb-20 lg:px-16">
           <div className="max-w-xl">
-            <h1 className="font-serif text-4xl leading-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
-              Dabadiwa wandana
+            <h1 className="font-serif text-3xl leading-tight text-white sm:text-4xl md:text-6xl lg:text-7xl">
+              Dabadiwa Wandana
             </h1>
-            <p className="mt-6 max-w-md text-base leading-relaxed text-white/85 sm:text-lg">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-white/85 sm:text-base md:mt-6 md:text-lg">
               Sacred Buddhist pilgrimage from Sri Lanka to the historic Buddhist
               holy sites in India.
             </p>
             <Link
               href="/#experiences"
-              className="mt-8 inline-flex items-center gap-3 rounded-lg border border-gold px-6 py-3.5 text-sm text-gold transition-colors hover:bg-gold/10"
+              className="mt-6 inline-flex items-center gap-3 rounded-lg border border-gold px-6 py-3.5 text-sm text-gold transition-colors hover:bg-gold/10 md:mt-8"
             >
               <PlayIcon />
               Watch Trailer (360°)

@@ -18,11 +18,11 @@ export async function generateMetadata({
   const video = getVideoBySlug(slug);
 
   if (!video) {
-    return { title: "Experience Not Found | Poson Sri Lanka" };
+    return { title: "Experience Not Found | Dabadiwa Wandana" };
   }
 
   return {
-    title: `${video.title} | VR Experience`,
+    title: `${video.title} | Dabadiwa Wandana`,
     description: video.description,
   };
 }

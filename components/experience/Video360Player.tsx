@@ -1,11 +1,17 @@
 "use client";
 
+import ImmersiveVideo from "@/components/experience/ImmersiveVideo";
+import SceneControls from "@/components/experience/SceneControls";
+import VideoSphere from "@/components/experience/VideoSphere";
+import type { Video360Layout, Video360LayoutConfig } from "@/lib/detectVideoLayout";
+import {
+  getLayoutLabel,
+  resolveLayout,
+} from "@/lib/detectVideoLayout";
 import { Canvas } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import SceneControls from "./SceneControls";
-import VideoSphere from "./VideoSphere";
 
 const xrStore = createXRStore({
   controller: false,
@@ -18,6 +24,7 @@ const xrStore = createXRStore({
 type Video360PlayerProps = {
   src: string;
   title: string;
+  configuredLayout?: Video360LayoutConfig;
 };
 
 function VrIcon() {
@@ -42,12 +49,42 @@ function VrIcon() {
   );
 }
 
-export default function Video360Player({ src, title }: Video360PlayerProps) {
+export default function Video360Player({
+  src,
+  title,
+  configuredLayout = "auto",
+}: Video360PlayerProps) {
   const [playing, setPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [layout, setLayout] = useState<Video360Layout>(() =>
+    configuredLayout && configuredLayout !== "auto"
+      ? configuredLayout
+      : "mono",
+  );
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
+    null,
+  );
+  const configuredLayoutRef = useRef(configuredLayout);
+  configuredLayoutRef.current = configuredLayout;
 
   const handleVideoReady = useCallback((video: HTMLVideoElement) => {
-    videoRef.current = video;
+    setVideoElement(video);
+
+    const updateLayout = () => {
+      setLayout(
+        resolveLayout(
+          configuredLayoutRef.current,
+          video.videoWidth,
+          video.videoHeight,
+        ),
+      );
+    };
+
+    if (video.videoWidth > 0) {
+      updateLayout();
+      return;
+    }
+
+    video.addEventListener("loadedmetadata", updateLayout, { once: true });
   }, []);
 
   const togglePlay = () => {
@@ -67,9 +104,13 @@ export default function Video360Player({ src, title }: Video360PlayerProps) {
         <XR store={xrStore}>
           <VideoSphere
             src={src}
+            layout={layout}
             playing={playing}
             onVideoReady={handleVideoReady}
           />
+          {videoElement && (
+            <ImmersiveVideo video={videoElement} layout={layout} />
+          )}
           <SceneControls />
         </XR>
       </Canvas>
@@ -82,9 +123,14 @@ export default function Video360Player({ src, title }: Video360PlayerProps) {
           >
             ← Back
           </Link>
-          <h1 className="max-w-md text-right font-serif text-lg text-white/90 md:text-xl">
-            {title}
-          </h1>
+          <div className="flex flex-col items-end gap-2">
+            <h1 className="max-w-md text-right font-serif text-lg text-white/90 md:text-xl">
+              {title}
+            </h1>
+            <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-white/60 backdrop-blur-sm">
+              {getLayoutLabel(layout)}
+            </span>
+          </div>
         </div>
 
         {!playing && (

@@ -72,8 +72,8 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen w-full overflow-hidden">
       <Image
-        src="/hero.jpg"
-        alt="Buddhist stupa at sunset in Sri Lanka"
+        src="/dabadiwa.png"
+        alt="Sacred Buddhist pilgrimage from Sri Lanka to historic holy sites in India"
         fill
         priority
         className="object-cover object-center"
@@ -89,10 +89,10 @@ export default function Hero() {
             <StupaLogo />
             <div className="font-serif leading-tight text-white">
               <span className="block text-lg font-semibold tracking-wide">
-                POSON
+                DABADIVA
               </span>
               <span className="block text-xs tracking-[0.2em] opacity-90">
-                SRI LANKA
+                WANDANA
               </span>
             </div>
           </Link>
@@ -126,12 +126,11 @@ export default function Hero() {
         <div className="flex flex-1 flex-col justify-center px-6 pb-20 md:px-12 lg:px-16">
           <div className="max-w-xl">
             <h1 className="font-serif text-4xl leading-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
-              Celebrate Poson.
-              <br />
-              Experience Peace.
+              Dabadiwa wandana
             </h1>
             <p className="mt-6 max-w-md text-base leading-relaxed text-white/85 sm:text-lg">
-              A spiritual journey through the sacred landscapes of Sri Lanka.
+              Sacred Buddhist pilgrimage from Sri Lanka to the historic Buddhist
+              holy sites in India.
             </p>
             <Link
               href="/#experiences"

@@ -113,14 +113,14 @@ export default function Hero() {
             ))}
           </nav>
 
-          <Link
+          {/* <Link
             href="/#experiences"
             className="flex items-center gap-2 rounded-lg border border-gold px-4 py-2.5 text-sm text-gold transition-colors hover:bg-gold/10"
           >
             <VrIcon />
             <span className="hidden sm:inline">Experience in VR</span>
             <span className="sm:hidden">VR</span>
-          </Link>
+          </Link> */}
         </header>
 
         <div className="flex flex-1 flex-col justify-center px-6 pb-12 md:px-12 md:pb-20 lg:px-16">
@@ -137,7 +137,7 @@ export default function Hero() {
               className="mt-6 inline-flex items-center gap-3 rounded-lg border border-gold px-6 py-3.5 text-sm text-gold transition-colors hover:bg-gold/10 md:mt-8"
             >
               <PlayIcon />
-              Watch Trailer (360°)
+              Explore Experiences
             </Link>
           </div>
         </div>

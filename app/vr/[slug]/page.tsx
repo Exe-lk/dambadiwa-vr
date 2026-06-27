@@ -1,4 +1,4 @@
-import Video360Player from "@/components/experience/Video360Player";
+import VrExperienceClient from "@/components/experience/VrExperienceClient";
 import { getVideoBySlug, vrVideos } from "@/lib/videos";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -37,7 +37,7 @@ export default async function VrExperiencePage({ params }: VrPageProps) {
 
   return (
     <main className="flex flex-1 flex-col">
-      <Video360Player
+      <VrExperienceClient
         src={video.src}
         title={video.title}
         configuredLayout={video.layout}

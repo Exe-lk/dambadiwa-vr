@@ -25,4 +25,12 @@ export const videoExperiences: VrVideo[] = [
     src: "https://vrvesak-cdn.b-cdn.net/roller_coater.mp4",
     layout: "stereo-top-bottom",
   },
+  {
+    id: "dabadiwa-wandana",
+    title: "Dabadiwa Wandana in Mahabodhi Temple",
+    description:
+      "Dabadiwa Wandana in Mahabodhi Temple at Bodh Gaya, India.",
+    src: "https://vrvesak-cdn.b-cdn.net/Mahabodhi%20Temple%20at%20Bodh%20Gaya%2C%20India.mp4",
+    layout: "stereo-top-bottom",
+  },
 ];

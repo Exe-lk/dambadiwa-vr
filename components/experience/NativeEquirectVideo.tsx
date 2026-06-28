@@ -6,15 +6,8 @@ import {
   useXRSessionFeatureEnabled,
   useXRStore,
 } from "@react-three/xr";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Mesh } from "three";
-
-const EQUIRECT_LAYER_PROPS = {
-  centralHorizontalAngle: Math.PI * 2,
-  upperVerticalAngle: Math.PI / 2,
-  lowerVerticalAngle: -Math.PI / 2,
-  radius: 10,
-} as const;
 
 type NativeEquirectVideoProps = {
   video: HTMLVideoElement;
@@ -22,9 +15,9 @@ type NativeEquirectVideoProps = {
 };
 
 /**
- * WebXR equirect media layer centered on the viewer (local space).
- * Using local-floor places the sphere at the feet — head ends up above center
- * and looking up shows black outside the layer.
+ * Native WebXR equirect media layer.
+ * Uses the same reference space as the WebGL projection layer (local-floor via R3F).
+ * Radius 0 = infinite sphere (orientation-only 360, per WebXR Layers spec).
  */
 export default function NativeEquirectVideo({
   video,
@@ -32,6 +25,7 @@ export default function NativeEquirectVideo({
 }: NativeEquirectVideoProps) {
   const session = useXR((state) => state.session);
   const mediaBinding = useXR((state) => state.mediaBinding);
+  const originReferenceSpace = useXR((state) => state.originReferenceSpace);
   const layersEnabled = useXRSessionFeatureEnabled("layers");
   const store = useXRStore();
   const meshRef = useRef<Mesh>(null);
@@ -40,27 +34,6 @@ export default function NativeEquirectVideo({
     renderOrder: number;
     object3D: Mesh;
   } | null>(null);
-  const [viewerSpace, setViewerSpace] = useState<XRReferenceSpace | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!session) {
-      setViewerSpace(null);
-      return;
-    }
-
-    let cancelled = false;
-    void session.requestReferenceSpace("local").then((space) => {
-      if (!cancelled) {
-        setViewerSpace(space);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -68,14 +41,14 @@ export default function NativeEquirectVideo({
       !session ||
       !layersEnabled ||
       !mediaBinding ||
-      !viewerSpace ||
+      !originReferenceSpace ||
       !mesh
     ) {
       return;
     }
 
     const layer = mediaBinding.createEquirectLayer(video, {
-      space: viewerSpace,
+      space: originReferenceSpace,
       layout,
     });
 
@@ -86,11 +59,10 @@ export default function NativeEquirectVideo({
       return;
     }
 
-    layer.centralHorizontalAngle =
-      EQUIRECT_LAYER_PROPS.centralHorizontalAngle;
-    layer.upperVerticalAngle = EQUIRECT_LAYER_PROPS.upperVerticalAngle;
-    layer.lowerVerticalAngle = EQUIRECT_LAYER_PROPS.lowerVerticalAngle;
-    layer.radius = EQUIRECT_LAYER_PROPS.radius;
+    layer.radius = 0;
+    layer.centralHorizontalAngle = Math.PI * 2;
+    layer.upperVerticalAngle = Math.PI / 2;
+    layer.lowerVerticalAngle = -Math.PI / 2;
 
     const layerEntry = {
       layer,
@@ -109,7 +81,7 @@ export default function NativeEquirectVideo({
     session,
     layersEnabled,
     mediaBinding,
-    viewerSpace,
+    originReferenceSpace,
     video,
     layout,
     store,

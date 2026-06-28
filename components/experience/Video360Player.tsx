@@ -3,6 +3,7 @@
 import NativeEquirectVideo from "@/components/experience/NativeEquirectVideo";
 import SceneControls from "@/components/experience/SceneControls";
 import VideoSpherePreview from "@/components/experience/VideoSpherePreview";
+import VrTransparentProjection from "@/components/experience/VrTransparentProjection";
 import type { Video360Layout, Video360LayoutConfig } from "@/lib/detectVideoLayout";
 import {
   getLayoutLabel,
@@ -25,7 +26,7 @@ const xrStore = createXRStore({
   layers: "required",
   offerSession: "immersive-vr",
   customSessionInit: {
-    requiredFeatures: ["local", "layers"],
+    requiredFeatures: ["local-floor", "layers"],
     optionalFeatures: [],
   },
 });
@@ -147,8 +148,12 @@ export default function Video360Player({
 
   return (
     <div className="relative h-full min-h-0 w-full flex-1 bg-black">
-      <Canvas camera={{ position: [0, 0, 0], fov: 75 }}>
+      <Canvas
+        camera={{ position: [0, 0, 0], fov: 75 }}
+        gl={{ alpha: true, antialias: true }}
+      >
         <XR store={xrStore}>
+          <VrTransparentProjection />
           {videoElement && (
             <>
               <VideoSpherePreview

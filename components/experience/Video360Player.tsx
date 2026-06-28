@@ -8,18 +8,21 @@ import {
   getLayoutLabel,
   resolveLayout,
 } from "@/lib/detectVideoLayout";
+import { prepareVideoForVr } from "@/lib/prepareVideoForVr";
 import { Canvas } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 
+// Require WebXR layers so video uses the compositor equirect path, not the Three.js mesh fallback.
 const xrStore = createXRStore({
   controller: false,
   hand: false,
   transientPointer: false,
   gaze: false,
   screenInput: false,
-  layers: true,
+  domOverlay: false,
+  layers: "required",
 });
 
 type Video360PlayerProps = {
@@ -64,10 +67,14 @@ export default function Video360Player({
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
     null,
   );
+  const [enteringVr, setEnteringVr] = useState(false);
+  const [vrError, setVrError] = useState<string | null>(null);
   const configuredLayoutRef = useRef(configuredLayout);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   configuredLayoutRef.current = configuredLayout;
 
   const handleVideoReady = useCallback((video: HTMLVideoElement) => {
+    videoElementRef.current = video;
     setVideoElement(video);
 
     const updateLayout = () => {
@@ -92,11 +99,34 @@ export default function Video360Player({
     setPlaying((current) => !current);
   };
 
-  const handleEnterVR = () => {
-    if (!playing) {
-      setPlaying(true);
+  const handleEnterVR = async () => {
+    const video = videoElementRef.current;
+    if (!video || enteringVr) return;
+
+    setVrError(null);
+    setEnteringVr(true);
+
+    try {
+      if (!playing) {
+        setPlaying(true);
+      }
+      await prepareVideoForVr(video);
+
+      const session = await xrStore.enterVR();
+      if (
+        session != null &&
+        !session.enabledFeatures?.includes("layers")
+      ) {
+        await session.end();
+        setVrError(
+          "This headset browser did not enable WebXR layers. Use the browser Enter VR control instead.",
+        );
+      }
+    } catch {
+      setVrError("Could not enter VR. Check that WebXR is supported over HTTPS.");
+    } finally {
+      setEnteringVr(false);
     }
-    void xrStore.enterVR();
   };
 
   return (
@@ -165,14 +195,21 @@ export default function Video360Player({
           </button>
           <button
             type="button"
-            onClick={handleEnterVR}
-            className="inline-flex items-center gap-2 rounded-lg border border-gold bg-black/50 px-5 py-2.5 text-sm text-gold backdrop-blur-sm transition-colors hover:bg-gold/10"
+            onClick={() => void handleEnterVR()}
+            disabled={!videoElement || enteringVr}
+            className="inline-flex items-center gap-2 rounded-lg border border-gold bg-black/50 px-5 py-2.5 text-sm text-gold backdrop-blur-sm transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <VrIcon />
-            Enter VR
+            {enteringVr ? "Entering VR…" : "Enter VR"}
           </button>
         </div>
       </div>
+
+      {vrError && (
+        <p className="pointer-events-none absolute bottom-36 left-0 right-0 px-6 text-center text-xs text-red-300/90 md:text-sm">
+          {vrError}
+        </p>
+      )}
 
       {!playing && (
         <p className="pointer-events-none absolute bottom-24 left-0 right-0 text-center text-xs text-white/50 md:text-sm">

@@ -1,7 +1,11 @@
 "use client";
 
 import type { Video360Layout } from "@/lib/detectVideoLayout";
-import { XRLayer, useXR } from "@react-three/xr";
+import {
+  XRLayer,
+  useXR,
+  useXRSessionFeatureEnabled,
+} from "@react-three/xr";
 
 type ImmersiveVideoProps = {
   video: HTMLVideoElement;
@@ -15,10 +19,15 @@ const FULL_EQUIRECT_ANGLES = {
   lowerVerticalAngle: -Math.PI / 2,
 } as const;
 
+/**
+ * Native WebXR equirect media layer (Quest compositor). Only mounts when immersive-vr
+ * is active and the session grants the `layers` feature — never the Three.js mesh fallback.
+ */
 export default function ImmersiveVideo({ video, layout }: ImmersiveVideoProps) {
   const inVR = useXR((state) => state.mode === "immersive-vr");
+  const layersEnabled = useXRSessionFeatureEnabled("layers");
 
-  if (!inVR) return null;
+  if (!inVR || !layersEnabled) return null;
 
   return (
     <XRLayer

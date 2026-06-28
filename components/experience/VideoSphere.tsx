@@ -13,6 +13,7 @@ type VideoSphereProps = {
   onVideoReady?: (video: HTMLVideoElement) => void;
 };
 
+/** 2D browser preview only — hidden in VR; immersive playback uses WebXR equirect layers. */
 export default function VideoSphere({
   src,
   playing,

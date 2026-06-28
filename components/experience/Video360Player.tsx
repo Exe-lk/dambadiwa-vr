@@ -19,6 +19,7 @@ const xrStore = createXRStore({
   transientPointer: false,
   gaze: false,
   screenInput: false,
+  layers: true,
 });
 
 type Video360PlayerProps = {

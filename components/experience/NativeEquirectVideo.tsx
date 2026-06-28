@@ -2,23 +2,18 @@
 
 import type { Video360Layout } from "@/lib/detectVideoLayout";
 import {
-  createXRLayer,
-  updateXRLayerProperties,
-  updateXRLayerTransform,
-} from "@pmndrs/xr";
-import { useFrame, useThree } from "@react-three/fiber";
-import {
   useXR,
   useXRSessionFeatureEnabled,
   useXRStore,
 } from "@react-three/xr";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Mesh } from "three";
 
 const EQUIRECT_LAYER_PROPS = {
   centralHorizontalAngle: Math.PI * 2,
   upperVerticalAngle: Math.PI / 2,
   lowerVerticalAngle: -Math.PI / 2,
+  radius: 10,
 } as const;
 
 type NativeEquirectVideoProps = {
@@ -27,55 +22,75 @@ type NativeEquirectVideoProps = {
 };
 
 /**
- * WebXR equirect media layer via XRMediaBinding (Quest compositor).
- * Does not use XRLayer — avoids the Three.js mesh fallback entirely.
+ * WebXR equirect media layer centered on the viewer (local space).
+ * Using local-floor places the sphere at the feet — head ends up above center
+ * and looking up shows black outside the layer.
  */
 export default function NativeEquirectVideo({
   video,
   layout,
 }: NativeEquirectVideoProps) {
   const session = useXR((state) => state.session);
+  const mediaBinding = useXR((state) => state.mediaBinding);
   const layersEnabled = useXRSessionFeatureEnabled("layers");
-  const originReferenceSpace = useXR((state) => state.originReferenceSpace);
   const store = useXRStore();
-  const gl = useThree((state) => state.gl);
   const meshRef = useRef<Mesh>(null);
   const layerEntryRef = useRef<{
     layer: XREquirectLayer;
     renderOrder: number;
     object3D: Mesh;
   } | null>(null);
+  const [viewerSpace, setViewerSpace] = useState<XRReferenceSpace | null>(
+    null,
+  );
 
   useEffect(() => {
-    const mesh = meshRef.current;
-    if (!session || !layersEnabled || !originReferenceSpace || !mesh) {
+    if (!session) {
+      setViewerSpace(null);
       return;
     }
 
-    const layer = createXRLayer(
-      video,
-      store.getState(),
-      originReferenceSpace,
-      gl.xr,
-      mesh,
-      { shape: "equirect", layout },
-      EQUIRECT_LAYER_PROPS,
-    );
+    let cancelled = false;
+    void session.requestReferenceSpace("local").then((space) => {
+      if (!cancelled) {
+        setViewerSpace(space);
+      }
+    });
 
-    if (layer == null || !(layer instanceof XREquirectLayer)) {
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (
+      !session ||
+      !layersEnabled ||
+      !mediaBinding ||
+      !viewerSpace ||
+      !mesh
+    ) {
+      return;
+    }
+
+    const layer = mediaBinding.createEquirectLayer(video, {
+      space: viewerSpace,
+      layout,
+    });
+
+    if (!(layer instanceof XREquirectLayer)) {
       console.warn(
         "[NativeEquirectVideo] XRMediaBinding.createEquirectLayer failed",
       );
       return;
     }
 
-    updateXRLayerProperties(layer, EQUIRECT_LAYER_PROPS);
-
-    layer.radius = 0;
     layer.centralHorizontalAngle =
       EQUIRECT_LAYER_PROPS.centralHorizontalAngle;
     layer.upperVerticalAngle = EQUIRECT_LAYER_PROPS.upperVerticalAngle;
     layer.lowerVerticalAngle = EQUIRECT_LAYER_PROPS.lowerVerticalAngle;
+    layer.radius = EQUIRECT_LAYER_PROPS.radius;
 
     const layerEntry = {
       layer,
@@ -93,21 +108,12 @@ export default function NativeEquirectVideo({
   }, [
     session,
     layersEnabled,
-    originReferenceSpace,
+    mediaBinding,
+    viewerSpace,
     video,
     layout,
     store,
-    gl,
   ]);
-
-  useFrame(() => {
-    const entry = layerEntryRef.current;
-    const mesh = meshRef.current;
-    if (entry == null || mesh == null) {
-      return;
-    }
-    updateXRLayerTransform(store.getState(), entry.layer, undefined, mesh);
-  });
 
   if (!session || !layersEnabled) {
     return null;

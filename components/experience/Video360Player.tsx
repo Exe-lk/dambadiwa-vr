@@ -24,6 +24,10 @@ const xrStore = createXRStore({
   domOverlay: false,
   layers: "required",
   offerSession: "immersive-vr",
+  customSessionInit: {
+    requiredFeatures: ["local", "layers"],
+    optionalFeatures: [],
+  },
 });
 
 type Video360PlayerProps = {
@@ -143,7 +147,7 @@ export default function Video360Player({
 
   return (
     <div className="relative h-full min-h-0 w-full flex-1 bg-black">
-      <Canvas camera={{ position: [0, 0, 0.1], fov: 75 }}>
+      <Canvas camera={{ position: [0, 0, 0], fov: 75 }}>
         <XR store={xrStore}>
           {videoElement && (
             <>

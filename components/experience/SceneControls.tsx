@@ -1,13 +1,12 @@
 "use client";
 
+import { useXrSessionActive } from "@/lib/useXrSessionActive";
 import { OrbitControls } from "@react-three/drei";
-import { useXR } from "@react-three/xr";
 
 export default function SceneControls() {
-  const mode = useXR((state) => state.mode);
-  const inVR = mode === "immersive-vr";
+  const sessionActive = useXrSessionActive();
 
-  if (inVR) return null;
+  if (sessionActive) return null;
 
   return (
     <OrbitControls

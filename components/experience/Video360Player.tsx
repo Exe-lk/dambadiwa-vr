@@ -1,20 +1,20 @@
 "use client";
 
-import ImmersiveVideo from "@/components/experience/ImmersiveVideo";
+import NativeEquirectVideo from "@/components/experience/NativeEquirectVideo";
 import SceneControls from "@/components/experience/SceneControls";
-import VideoSphere from "@/components/experience/VideoSphere";
+import VideoSpherePreview from "@/components/experience/VideoSpherePreview";
 import type { Video360Layout, Video360LayoutConfig } from "@/lib/detectVideoLayout";
 import {
   getLayoutLabel,
   resolveLayout,
 } from "@/lib/detectVideoLayout";
+import { createVrVideoElement } from "@/lib/createVrVideoElement";
 import { prepareVideoForVr } from "@/lib/prepareVideoForVr";
 import { Canvas } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// Require WebXR layers so video uses the compositor equirect path, not the Three.js mesh fallback.
 const xrStore = createXRStore({
   controller: false,
   hand: false,
@@ -23,6 +23,7 @@ const xrStore = createXRStore({
   screenInput: false,
   domOverlay: false,
   layers: "required",
+  offerSession: "immersive-vr",
 });
 
 type Video360PlayerProps = {
@@ -73,7 +74,8 @@ export default function Video360Player({
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
   configuredLayoutRef.current = configuredLayout;
 
-  const handleVideoReady = useCallback((video: HTMLVideoElement) => {
+  useEffect(() => {
+    const video = createVrVideoElement(src);
     videoElementRef.current = video;
     setVideoElement(video);
 
@@ -89,11 +91,17 @@ export default function Video360Player({
 
     if (video.videoWidth > 0) {
       updateLayout();
-      return;
+    } else {
+      video.addEventListener("loadedmetadata", updateLayout, { once: true });
     }
 
-    video.addEventListener("loadedmetadata", updateLayout, { once: true });
-  }, []);
+    return () => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      videoElementRef.current = null;
+    };
+  }, [src]);
 
   const togglePlay = () => {
     setPlaying((current) => !current);
@@ -113,17 +121,21 @@ export default function Video360Player({
       await prepareVideoForVr(video);
 
       const session = await xrStore.enterVR();
-      if (
-        session != null &&
-        !session.enabledFeatures?.includes("layers")
-      ) {
+      if (session == null) {
+        setVrError("Could not start a VR session on this device.");
+        return;
+      }
+
+      if (!session.enabledFeatures?.includes("layers")) {
         await session.end();
         setVrError(
-          "This headset browser did not enable WebXR layers. Use the browser Enter VR control instead.",
+          "WebXR layers are required for native 360° video on this device.",
         );
       }
     } catch {
-      setVrError("Could not enter VR. Check that WebXR is supported over HTTPS.");
+      setVrError(
+        "Could not enter VR. Use Meta Quest Browser over HTTPS and try again.",
+      );
     } finally {
       setEnteringVr(false);
     }
@@ -133,14 +145,15 @@ export default function Video360Player({
     <div className="relative h-full min-h-0 w-full flex-1 bg-black">
       <Canvas camera={{ position: [0, 0, 0.1], fov: 75 }}>
         <XR store={xrStore}>
-          <VideoSphere
-            src={src}
-            layout={layout}
-            playing={playing}
-            onVideoReady={handleVideoReady}
-          />
           {videoElement && (
-            <ImmersiveVideo video={videoElement} layout={layout} />
+            <>
+              <VideoSpherePreview
+                video={videoElement}
+                layout={layout}
+                playing={playing}
+              />
+              <NativeEquirectVideo video={videoElement} layout={layout} />
+            </>
           )}
           <SceneControls />
         </XR>

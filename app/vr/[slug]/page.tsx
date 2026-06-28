@@ -36,7 +36,7 @@ export default async function VrExperiencePage({ params }: VrPageProps) {
   }
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex min-h-0 flex-1 flex-col">
       <Video360Player
         src={video.src}
         title={video.title}

@@ -100,7 +100,7 @@ export default function Video360Player({
   };
 
   return (
-    <div className="relative h-screen w-full bg-black">
+    <div className="relative h-full min-h-0 w-full flex-1 bg-black">
       <Canvas camera={{ position: [0, 0, 0.1], fov: 75 }}>
         <XR store={xrStore}>
           <VideoSphere

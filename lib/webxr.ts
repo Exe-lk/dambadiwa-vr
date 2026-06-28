@@ -32,3 +32,9 @@ export function formatVrError(error: unknown): string {
   }
   return "Could not enter VR. Try Meta Quest Browser over HTTPS.";
 }
+
+export function requestImmersiveVr(
+  enterVR: () => Promise<unknown>,
+): Promise<unknown> {
+  return enterVR();
+}

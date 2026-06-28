@@ -2,7 +2,6 @@
 
 import { applyLayoutToTexture } from "@/lib/applyVideoLayoutTexture";
 import type { Video360Layout } from "@/lib/detectVideoLayout";
-import { useXR } from "@react-three/xr";
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 
@@ -21,7 +20,6 @@ export default function VideoSphere({
   onVideoReady,
   onVideoError,
 }: VideoSphereProps) {
-  const inVR = useXR((state) => state.mode === "immersive-vr");
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
 
   useEffect(() => {
@@ -76,7 +74,7 @@ export default function VideoSphere({
     if (playing) {
       void video.play().catch(() => {
         onVideoError?.(
-          "Playback was blocked. Tap Play, then Enter VR again.",
+          "Playback was blocked. Open this page in Meta Quest Browser over HTTPS.",
         );
       });
     } else {
@@ -84,7 +82,7 @@ export default function VideoSphere({
     }
   }, [playing, texture, onVideoError]);
 
-  if (inVR || !texture) return null;
+  if (!texture) return null;
 
   return (
     <mesh scale={[-1, 1, 1]}>

@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import ExperienceVrLink from "@/components/ExperienceVrLink";
 import { vrVideos } from "@/lib/videos";
 
 function VrIcon() {
@@ -29,8 +31,9 @@ export default function VideoExperiences() {
       <div className="px-6 py-16 text-center md:px-12 md:py-20 lg:px-16">
         <h2 className="font-serif text-4xl md:text-5xl">VR Experiences</h2>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/70 md:text-lg">
-          Explore Poson in immersive 360°. Watch below in your browser, or open
-          an experience in VR on your Meta Quest headset.
+          Explore sacred Buddhist pilgrimage sites in immersive 360°. Watch below
+          in your browser, or open an experience in VR on your Meta Quest
+          headset.
         </p>
       </div>
 
@@ -44,13 +47,13 @@ export default function VideoExperiences() {
                   {video.description}
                 </p>
               </div>
-              <Link
-                href={`/vr/${video.id}`}
+              <ExperienceVrLink
+                videoId={video.id}
                 className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-gold px-5 py-3 text-sm text-gold transition-colors hover:bg-gold/10 sm:self-center"
               >
                 <VrIcon />
                 Experience in VR
-              </Link>
+              </ExperienceVrLink>
             </div>
 
             <div className="p-6 md:p-12 lg:p-16">

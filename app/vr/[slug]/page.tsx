@@ -38,6 +38,7 @@ export default async function VrExperiencePage({ params }: VrPageProps) {
   return (
     <main className="flex flex-1 flex-col">
       <VrExperienceClient
+        videoId={video.id}
         src={video.src}
         title={video.title}
         configuredLayout={video.layout}

@@ -1,6 +1,5 @@
 "use client";
 
-import ImmersiveVideo from "@/components/experience/ImmersiveVideo";
 import SceneControls from "@/components/experience/SceneControls";
 import VideoSphere from "@/components/experience/VideoSphere";
 import type { Video360Layout, Video360LayoutConfig } from "@/lib/detectVideoLayout";
@@ -12,6 +11,7 @@ import {
   checkImmersiveVrSupport,
   formatVrError,
   getSecureContextMessage,
+  requestImmersiveVr,
 } from "@/lib/webxr";
 import { Canvas } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
@@ -25,55 +25,36 @@ const xrStore = createXRStore({
   gaze: false,
   screenInput: false,
   domOverlay: false,
+  offerSession: "immersive-vr",
+  enterGrantedSession: ["immersive-vr"],
 });
 
 type Video360PlayerProps = {
   src: string;
   title: string;
   configuredLayout?: Video360LayoutConfig;
+  autoEnterVr?: boolean;
 };
-
-function VrIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M4 8h16a2 2 0 012 2v4a2 2 0 01-2 2h-2.5l-1.5 2.5a1 1 0 01-1.7 0L14.5 16H9.5L8 18.5a1 1 0 01-1.7 0L5 16H4a2 2 0 01-2-2v-4a2 2 0 012-2z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="9" cy="12" r="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="15" cy="12" r="2" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
 
 export default function Video360Player({
   src,
   title,
   configuredLayout = "auto",
+  autoEnterVr = true,
 }: Video360PlayerProps) {
   const [playing, setPlaying] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   const [layout, setLayout] = useState<Video360Layout>(() =>
     configuredLayout && configuredLayout !== "auto"
       ? configuredLayout
       : "mono",
-  );
-  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
-    null,
   );
   const [inVR, setInVR] = useState(false);
   const [vrSupported, setVrSupported] = useState<boolean | null>(null);
   const [vrError, setVrError] = useState<string | null>(null);
   const [enteringVr, setEnteringVr] = useState(false);
   const configuredLayoutRef = useRef(configuredLayout);
+  const autoEnterAttempted = useRef(false);
   configuredLayoutRef.current = configuredLayout;
 
   useEffect(() => {
@@ -81,6 +62,7 @@ export default function Video360Player({
     if (secureContextMessage) {
       setVrError(secureContextMessage);
       setVrSupported(false);
+      setEnteringVr(false);
       return;
     }
 
@@ -92,6 +74,7 @@ export default function Video360Player({
           setVrError(
             "Immersive VR is not available in this browser. Use Meta Quest Browser over HTTPS.",
           );
+          setEnteringVr(false);
         }
       }
     });
@@ -115,9 +98,31 @@ export default function Video360Player({
     });
   }, []);
 
-  const handleVideoReady = useCallback((video: HTMLVideoElement) => {
-    setVideoElement(video);
+  useEffect(() => {
+    if (!autoEnterVr || autoEnterAttempted.current) {
+      return;
+    }
+    if (vrSupported !== true) {
+      return;
+    }
 
+    autoEnterAttempted.current = true;
+    setPlaying(true);
+    setEnteringVr(true);
+
+    const frameId = requestAnimationFrame(() => {
+      requestImmersiveVr(() => xrStore.enterVR()).catch((error: unknown) => {
+        setEnteringVr(false);
+        setVrError(formatVrError(error));
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [autoEnterVr, vrSupported]);
+
+  const handleVideoReady = useCallback((video: HTMLVideoElement) => {
     const updateLayout = () => {
       setLayout(
         resolveLayout(
@@ -138,40 +143,8 @@ export default function Video360Player({
 
   const handleVideoError = useCallback((message: string) => {
     setVrError(message);
+    setEnteringVr(false);
   }, []);
-
-  const togglePlay = () => {
-    setPlaying((current) => !current);
-  };
-
-  const handleEnterVR = () => {
-    setVrError(null);
-
-    const secureContextMessage = getSecureContextMessage();
-    if (secureContextMessage) {
-      setVrError(secureContextMessage);
-      return;
-    }
-
-    if (vrSupported === false) {
-      setVrError(
-        "Immersive VR is not available. Use Meta Quest Browser over HTTPS.",
-      );
-      return;
-    }
-
-    if (!playing) {
-      setPlaying(true);
-    }
-
-    setEnteringVr(true);
-
-    // requestSession must run in the same user gesture — do not await before enterVR().
-    xrStore.enterVR().catch((error: unknown) => {
-      setEnteringVr(false);
-      setVrError(formatVrError(error));
-    });
-  };
 
   const handleExitVR = () => {
     const session = xrStore.getState().session;
@@ -180,11 +153,28 @@ export default function Video360Player({
     }
   };
 
-  const enterVrDisabled = enteringVr || vrSupported === false;
+  const handleStartPreview = () => {
+    setPreviewMode(true);
+    setPlaying(true);
+  };
+
+  const togglePlay = () => {
+    setPlaying((current) => !current);
+  };
+
+  const vrUnavailable = vrSupported === false;
+  const showLoadingOverlay = enteringVr && !inVR && !vrError && !previewMode;
+  const showVrUnavailableOverlay = vrUnavailable && !previewMode && !inVR;
+  const showPreviewControls = previewMode && !inVR;
+  const showEnterVrFailureOverlay =
+    !inVR && Boolean(vrError) && !vrUnavailable && !previewMode;
 
   return (
     <div className="relative h-screen w-full bg-black">
-      <Canvas camera={{ position: [0, 0, 0], fov: 75, near: 0.01, far: 1000 }}>
+      <Canvas
+        camera={{ position: [0, 0, 0], fov: 75, near: 0.01, far: 1000 }}
+        style={{ touchAction: "none" }}
+      >
         <XR store={xrStore}>
           <VideoSphere
             src={src}
@@ -193,23 +183,73 @@ export default function Video360Player({
             onVideoReady={handleVideoReady}
             onVideoError={handleVideoError}
           />
-          {videoElement && (
-            <ImmersiveVideo video={videoElement} layout={layout} />
-          )}
-          <SceneControls />
+          <SceneControls enabled={previewMode} />
         </XR>
       </Canvas>
 
-      {!inVR && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 md:p-6">
-          <div className="pointer-events-auto flex items-start justify-between gap-4">
+      {showLoadingOverlay && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 px-6">
+          <p className="font-serif text-lg text-white/90 md:text-xl">{title}</p>
+          <p className="text-sm text-white/60">Entering VR…</p>
+          <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-white/50">
+            {getLayoutLabel(layout)}
+          </span>
+        </div>
+      )}
+
+      {showVrUnavailableOverlay && (
+        <div className="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 px-6">
+          <p
+            role="alert"
+            className="max-w-md text-center text-sm text-red-200 md:text-base"
+          >
+            {vrError}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleStartPreview}
+              className="rounded-lg border border-gold bg-black/50 px-5 py-2.5 text-sm text-gold backdrop-blur-sm transition-colors hover:bg-gold/10"
+            >
+              Play 360° preview
+            </button>
             <Link
               href="/#experiences"
-              className="rounded-lg border border-white/20 bg-black/50 px-4 py-2 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+              className="rounded-lg border border-white/20 bg-black/50 px-5 py-2.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            >
+              ← Back to experiences
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {showEnterVrFailureOverlay && (
+        <div className="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/90 px-6">
+          <p
+            role="alert"
+            className="max-w-md text-center text-sm text-red-200 md:text-base"
+          >
+            {vrError}
+          </p>
+          <Link
+            href="/#experiences"
+            className="rounded-lg border border-white/20 bg-black/50 px-5 py-2.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+          >
+            ← Back to experiences
+          </Link>
+        </div>
+      )}
+
+      {showPreviewControls && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 md:p-6">
+          <div className="flex w-full items-start justify-between gap-4">
+            <Link
+              href="/#experiences"
+              className="pointer-events-auto rounded-lg border border-white/20 bg-black/50 px-4 py-2 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
             >
               ← Back
             </Link>
-            <div className="flex flex-col items-end gap-2">
+            <div className="pointer-events-auto flex flex-col items-end gap-2">
               <h1 className="max-w-md text-right font-serif text-lg text-white/90 md:text-xl">
                 {title}
               </h1>
@@ -220,11 +260,11 @@ export default function Video360Player({
           </div>
 
           {!playing && (
-            <div className="pointer-events-auto absolute inset-0 flex items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <button
                 type="button"
                 onClick={togglePlay}
-                className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-gold bg-black/60 text-gold backdrop-blur-sm transition-colors hover:bg-gold/10"
+                className="pointer-events-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-gold bg-black/60 text-gold backdrop-blur-sm transition-colors hover:bg-gold/10"
                 aria-label="Play 360 video"
               >
                 <svg
@@ -240,42 +280,19 @@ export default function Video360Player({
             </div>
           )}
 
-          <div className="pointer-events-auto flex flex-col items-center gap-3">
-            {vrError && (
-              <p
-                role="alert"
-                className="max-w-md rounded-lg border border-red-500/40 bg-red-950/80 px-4 py-2 text-center text-xs text-red-200 md:text-sm"
-              >
-                {vrError}
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={togglePlay}
-                className="rounded-lg border border-white/20 bg-black/50 px-5 py-2.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-              >
-                {playing ? "Pause" : "Play"}
-              </button>
-              <button
-                type="button"
-                onClick={handleEnterVR}
-                disabled={enterVrDisabled}
-                className="inline-flex items-center gap-2 rounded-lg border border-gold bg-black/50 px-5 py-2.5 text-sm text-gold backdrop-blur-sm transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <VrIcon />
-                {enteringVr ? "Entering VR…" : "Enter VR"}
-              </button>
-            </div>
+          <div className="pointer-events-none flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="pointer-events-auto rounded-lg border border-white/20 bg-black/50 px-5 py-2.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+            <p className="text-center text-xs text-white/50 md:text-sm">
+              Drag to look around
+            </p>
           </div>
         </div>
-      )}
-
-      {!inVR && !playing && !vrError && (
-        <p className="pointer-events-none absolute bottom-24 left-0 right-0 text-center text-xs text-white/50 md:text-sm">
-          Drag to look around · Tap Enter VR on a Meta Quest headset
-        </p>
       )}
 
       {inVR && (
@@ -287,6 +304,17 @@ export default function Video360Player({
           >
             Exit VR
           </button>
+        </div>
+      )}
+
+      {!inVR && !enteringVr && !previewMode && !vrUnavailable && !vrError && (
+        <div className="pointer-events-auto absolute left-4 top-4 md:left-6 md:top-6">
+          <Link
+            href="/#experiences"
+            className="rounded-lg border border-white/20 bg-black/50 px-4 py-2 text-sm text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+          >
+            ← Back
+          </Link>
         </div>
       )}
     </div>
